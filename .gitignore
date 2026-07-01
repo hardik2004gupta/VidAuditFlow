@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets -- never commit real credentials.
+# See PROJECT_AUDIT.md (finding C2) / TECHNICAL_DEBT.md (TD-2): this repo
+# previously had no rule excluding `.env`, which is one commit away from
+# leaking real Azure/LangSmith credentials. Use `.env.example` as the
+# template for a local `.env`.
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.vscode/
+.idea/
+*.log
