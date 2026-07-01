@@ -22,3 +22,8 @@ wheels/
 .vscode/
 .idea/
 *.log
+
+# Local SQLite database (Phase 4) -- development data only, never committed.
+# Production uses Postgres via DATABASE_URL; see core/config.py.
+*.db
+*.db-journal

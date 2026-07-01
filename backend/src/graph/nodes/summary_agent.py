@@ -26,10 +26,9 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import AzureChatOpenAI
 
-from backend.src.core.config import settings
 from backend.src.core.logging import get_logger
+from backend.src.graph.llm_clients import get_chat_llm
 from backend.src.graph.observability import extract_token_usage, make_trace, start_timer
 from backend.src.graph.prompts import SUMMARY_SYSTEM_PROMPT, build_summary_context
 from backend.src.graph.state import VideoAuditState
@@ -169,13 +168,7 @@ async def summary_agent(state: VideoAuditState) -> Dict[str, Any]:
     # --- Case 3: normal path -- try one small LLM call for the narrative. ---
     tokens_used = 0
     try:
-        llm = AzureChatOpenAI(
-            azure_deployment=settings.azure_openai_chat_deployment,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
-            openai_api_version=settings.azure_openai_api_version,
-            temperature=0.3,
-        )
+        llm = get_chat_llm(temperature=0.3)
         context = build_summary_context(violations, score, risk_level)
         response = await llm.ainvoke(
             [SystemMessage(content=SUMMARY_SYSTEM_PROMPT), HumanMessage(content=context)]

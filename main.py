@@ -90,7 +90,7 @@ async def run_cli_simulation() -> None:
         print(result.final_report)
 
     except Exception as e:
-        logger.error(f"Workflow Execution Failed: {str(e)}")
+        logger.error(f"Workflow Execution Failed: {e!s}")
         raise
 
 

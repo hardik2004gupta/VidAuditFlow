@@ -26,10 +26,9 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import AzureChatOpenAI
 
-from backend.src.core.config import settings
 from backend.src.core.logging import get_logger
+from backend.src.graph.llm_clients import get_chat_llm
 from backend.src.graph.observability import extract_token_usage, make_trace, start_timer
 from backend.src.graph.prompts import COMPLIANCE_SYSTEM_PROMPT, build_compliance_context
 from backend.src.graph.state import VideoAuditState
@@ -60,13 +59,7 @@ async def compliance_agent(state: VideoAuditState) -> Dict[str, Any]:
     tokens_used = 0
 
     try:
-        llm = AzureChatOpenAI(
-            azure_deployment=settings.azure_openai_chat_deployment,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
-            openai_api_version=settings.azure_openai_api_version,
-            temperature=0.0,
-        )
+        llm = get_chat_llm(temperature=0.0)
         structured_llm = llm.with_structured_output(ComplianceAnalysis, include_raw=True)
 
         context = build_compliance_context(
@@ -85,14 +78,15 @@ async def compliance_agent(state: VideoAuditState) -> Dict[str, Any]:
                 "Compliance agent got malformed structured output; retrying once",
                 extra={"video_id": state.video_id, "error": str(result["parsing_error"])},
             )
-            retry_messages = messages + [
+            retry_messages = [
+                *messages,
                 HumanMessage(
                     content=(
                         "Your previous response did not match the required output "
                         f"schema and could not be parsed: {result['parsing_error']}\n\n"
                         "Please respond again, strictly following the schema."
                     )
-                )
+                ),
             ]
             result = await structured_llm.ainvoke(retry_messages)
             tokens_used += extract_token_usage(result["raw"]) or 0

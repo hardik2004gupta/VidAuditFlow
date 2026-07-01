@@ -34,8 +34,8 @@ async def download_youtube_video(
     """Download ``video_url`` into ``output_dir`` and return the local file path.
 
     ``output_dir`` should be a per-job temporary directory (see
-    ``graph/nodes.py``) so concurrent audits never share a filename --
-    closing PROJECT_AUDIT.md finding C3.
+    ``graph/nodes/transcript_agent.py``) so concurrent audits never share a
+    filename -- closing PROJECT_AUDIT.md finding C3.
 
     Raises:
         VideoDownloadError: if the URL isn't a recognized YouTube URL, or if

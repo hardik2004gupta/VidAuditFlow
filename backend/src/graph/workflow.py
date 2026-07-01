@@ -49,7 +49,11 @@ from backend.src.graph.nodes.retrieval_agent import retrieval_agent
 from backend.src.graph.nodes.summary_agent import summary_agent
 from backend.src.graph.nodes.transcript_agent import transcript_agent
 from backend.src.graph.state import VideoAuditState
-from backend.src.graph.supervisor import route_after_join, supervisor_join, supervisor_start
+from backend.src.graph.supervisor import (
+    route_after_join,
+    supervisor_join,
+    supervisor_start,
+)
 
 
 def create_graph() -> CompiledStateGraph:

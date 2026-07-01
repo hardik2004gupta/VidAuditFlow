@@ -31,7 +31,12 @@ from typing import Any, Dict, List
 
 import httpx
 from azure.identity.aio import DefaultAzureCredential
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from backend.src.core.config import settings
 from backend.src.core.exceptions import VideoIndexerError

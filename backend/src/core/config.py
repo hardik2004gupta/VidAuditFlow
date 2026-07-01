@@ -78,6 +78,14 @@ class Settings(BaseSettings):
     video_indexer_poll_interval_seconds: float = 30.0
     video_indexer_max_poll_attempts: int = 60  # ~30 minutes ceiling before giving up
 
+    # --- Database (Phase 4) ---
+    # Defaults to a local SQLite file so development works with zero setup
+    # (DATABASE_PLAN.md: "SQLite should work automatically for local
+    # development"). Production sets DATABASE_URL to a Postgres DSN, e.g.
+    # postgresql+asyncpg://user:pass@host/db -- same code path either way,
+    # since both drivers are async (aiosqlite / asyncpg).
+    database_url: str = "sqlite+aiosqlite:///./vidauditflow.db"
+
 
 @lru_cache
 def get_settings() -> Settings:

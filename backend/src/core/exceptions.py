@@ -35,3 +35,7 @@ class ComplianceError(VidAuditFlowError):
 
 class ValidationError(VidAuditFlowError):
     """An input failed a domain-level validation rule."""
+
+
+class NotFoundError(VidAuditFlowError):
+    """A requested resource (job, report, ...) does not exist."""

@@ -25,9 +25,14 @@ from typing import Annotated, Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from backend.src.graph.observability import StageTrace
-from backend.src.schemas.audit import ComplianceIssue, IngestStatus, JobStatus, RetrievedRule
+from backend.src.schemas.audit import (
+    ComplianceIssue,
+    IngestStatus,
+    JobStatus,
+    RetrievedRule,
+)
 
-__all__ = ["VideoAuditState", "ComplianceIssue", "RetrievedRule", "StageTrace"]
+__all__ = ["ComplianceIssue", "RetrievedRule", "StageTrace", "VideoAuditState"]
 
 
 class VideoAuditState(BaseModel):

@@ -25,7 +25,12 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 Severity = Literal["CRITICAL", "WARNING"]
-JobStatus = Literal["pending", "running", "degraded", "completed", "completed_degraded", "failed"]
+# "degraded" was a placeholder for an intermediate state that no node ever
+# actually sets (the Supervisor's join step only ever records a warning;
+# the Summary Agent is what finalizes the terminal completed/
+# completed_degraded/failed value) -- removed so the type reflects the
+# values nodes actually produce.
+JobStatus = Literal["pending", "running", "completed", "completed_degraded", "failed"]
 StageStatus = Literal["success", "failed", "skipped"]
 IngestStatus = Literal["pending", "success", "failed"]
 

@@ -22,11 +22,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from langchain_community.vectorstores import AzureSearch
-from langchain_openai import AzureOpenAIEmbeddings
-
-from backend.src.core.config import settings
 from backend.src.core.logging import get_logger
+from backend.src.graph.llm_clients import get_vector_store
 from backend.src.graph.observability import make_trace, start_timer
 from backend.src.graph.state import VideoAuditState
 from backend.src.schemas.audit import RetrievedRule
@@ -50,18 +47,7 @@ async def retrieval_agent(state: VideoAuditState) -> Dict[str, Any]:
     logger.info("Retrieval agent started", extra={"video_id": state.video_id})
 
     try:
-        embeddings = AzureOpenAIEmbeddings(
-            azure_deployment=settings.azure_openai_embedding_deployment,
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
-            openai_api_version=settings.azure_openai_api_version,
-        )
-        vector_store = AzureSearch(
-            azure_search_endpoint=settings.azure_search_endpoint,
-            azure_search_key=settings.azure_search_api_key,
-            index_name=settings.azure_search_index_name,
-            embedding_function=embeddings.embed_query,
-        )
+        vector_store = get_vector_store()
 
         query_text = f"{state.transcript or ''} {' '.join(state.ocr_text)}".strip()
         docs = await vector_store.asimilarity_search(query_text, k=_RETRIEVAL_TOP_K)
