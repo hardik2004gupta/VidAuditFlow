@@ -29,6 +29,7 @@ from backend.src.api.telemetry import setup_telemetry  # noqa: E402
 from backend.src.core.config import settings  # noqa: E402
 from backend.src.core.exceptions import ValidationError, VidAuditFlowError  # noqa: E402
 from backend.src.core.logging import get_logger, set_request_id  # noqa: E402
+from backend.src.graph.adapters import to_audit_result  # noqa: E402
 from backend.src.graph.workflow import app as compliance_graph  # noqa: E402
 from backend.src.schemas.audit import AuditRequest, AuditResponse  # noqa: E402
 
@@ -88,10 +89,13 @@ async def handle_app_error(request: Request, exc: VidAuditFlowError) -> JSONResp
 async def audit_video(request: AuditRequest) -> AuditResponse:
     """Trigger the compliance audit workflow for a YouTube video.
 
-    The LangGraph nodes are designed to catch their own external failures
-    and return a ``FAIL`` state rather than raising (see ``graph/nodes.py``),
-    so this endpoint's ``try/except`` is a defensive backstop for truly
-    unexpected errors, not the primary error path.
+    The graph's specialist nodes are designed to catch their own external
+    failures and degrade gracefully rather than raising (see
+    ``graph/nodes/*`` and ``graph/supervisor.py``), so this endpoint's
+    ``try/except`` is a defensive backstop for truly unexpected errors, not
+    the primary error path. The external response shape here is unchanged
+    from Phase 2 -- ``graph/adapters.py`` is what maps the graph's richer
+    internal state onto this stable contract.
     """
     session_id = str(uuid.uuid4())
     video_id_short = f"vid_{session_id[:8]}"
@@ -104,12 +108,15 @@ async def audit_video(request: AuditRequest) -> AuditResponse:
     initial_state: Dict[str, Any] = {
         "video_url": request.video_url,
         "video_id": video_id_short,
-        "compliance_results": [],
-        "errors": [],
+    }
+    run_config = {
+        "run_name": f"audit-{video_id_short}",
+        "tags": ["vidauditflow", "audit"],
+        "metadata": {"video_id": video_id_short, "session_id": session_id, "video_url": request.video_url},
     }
 
     try:
-        final_state = await compliance_graph.ainvoke(initial_state)
+        final_state = await compliance_graph.ainvoke(initial_state, config=run_config)
     except Exception as exc:
         logger.exception("Audit workflow failed unexpectedly")
         raise HTTPException(
@@ -117,12 +124,13 @@ async def audit_video(request: AuditRequest) -> AuditResponse:
             detail="Workflow execution failed unexpectedly. Please try again.",
         ) from exc
 
+    result = to_audit_result(final_state, fallback_video_id=video_id_short)
     return AuditResponse(
         session_id=session_id,
-        video_id=final_state.get("video_id", video_id_short),
-        status=final_state.get("final_status", "UNKNOWN"),
-        final_report=final_state.get("final_report", "No report generated."),
-        compliance_results=final_state.get("compliance_results", []),
+        video_id=result.video_id,
+        status=result.status,
+        final_report=result.final_report,
+        compliance_results=result.compliance_results,
     )
 
 

@@ -1,36 +1,70 @@
-"""LangGraph state schema for the video compliance audit workflow."""
+"""LangGraph state schema for the video compliance audit workflow.
+
+Phase 3 change (AI_PIPELINE_VISION.md section 1): the state is now a
+strongly typed Pydantic model instead of a ``TypedDict``. LangGraph accepts
+a Pydantic ``BaseModel`` as a graph's state schema natively -- nodes receive
+a validated model instance (attribute access, not ``.get()``), and partial
+dict updates returned by nodes are still merged and re-validated the same
+way ``TypedDict`` updates were. Reducers (``Annotated[..., operator.add]``)
+work identically for both.
+
+Every field below is either explicitly requested by AI_PIPELINE_VISION.md
+or is minimally necessary to implement the failure-routing/degraded-mode
+rules it also asks for (the three ``*_status`` fields exist because the
+Supervisor cannot make routing decisions -- "did transcript succeed?" --
+without somewhere to read that from). ``local_file_path``, which Phase 2's
+state carried, is gone: the Transcript Agent's temp directory is now fully
+local to its own function scope and never needs to be shared state.
+"""
+
+from __future__ import annotations
 
 import operator
-from typing import Annotated, Any, Dict, List, Optional, TypedDict
+from typing import Annotated, Any, Dict, List, Optional
 
-from backend.src.schemas.audit import ComplianceIssue
+from pydantic import BaseModel, Field
 
-__all__ = ["VideoAuditState", "ComplianceIssue"]
+from backend.src.graph.observability import StageTrace
+from backend.src.schemas.audit import ComplianceIssue, IngestStatus, JobStatus, RetrievedRule
+
+__all__ = ["VideoAuditState", "ComplianceIssue", "RetrievedRule", "StageTrace"]
 
 
-class VideoAuditState(TypedDict):
+class VideoAuditState(BaseModel):
     """The data schema shared across every node in the LangGraph execution."""
 
     # --- Input Parameters ---
     video_url: str
     video_id: str
 
-    # --- Ingestion & Extraction Data ---
-    # Optional because they are populated asynchronously by the Indexer Node.
-    local_file_path: Optional[str]
-    video_metadata: Dict[str, Any]  # e.g., {"duration": 15, "resolution": "1080p"}
-    transcript: Optional[str]       # Full extracted speech-to-text
-    ocr_text: List[str]             # List of recognized on-screen text
+    # --- Transcript Agent output ---
+    transcript: Optional[str] = None
+    transcript_status: IngestStatus = "pending"
 
-    # --- Analysis Output ---
-    # Annotated with operator.add so multiple nodes can append without
-    # overwriting each other's contributions.
-    compliance_results: Annotated[List[ComplianceIssue], operator.add]
+    # --- OCR Agent output ---
+    ocr_text: List[str] = Field(default_factory=list)
+    ocr_status: IngestStatus = "pending"
 
-    # --- Final Deliverables ---
-    final_status: str               # "PASS" | "FAIL"
-    final_report: str               # Markdown summary for the frontend
+    # --- Shared ingestion metadata (duration, platform); populated once by the Transcript Agent ---
+    video_metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    # --- System Observability ---
-    # Appends system-level errors (e.g., API timeouts) without halting execution logic.
-    errors: Annotated[List[str], operator.add]
+    # --- Retrieval Agent output ---
+    retrieved_rules: List[RetrievedRule] = Field(default_factory=list)
+    retrieval_status: IngestStatus = "pending"
+
+    # --- Compliance Agent output ---
+    # Annotated with operator.add so a future re-run of the node (e.g. a
+    # retry) appends rather than silently overwriting prior findings.
+    violations: Annotated[List[ComplianceIssue], operator.add] = Field(default_factory=list)
+    compliance_status: Optional[str] = None  # "PASS" | "FAIL", mirrors ComplianceAnalysis.overall_status
+
+    # --- Summary Agent output ---
+    summary: Optional[str] = None  # Full Markdown report (executive summary + score + fixes + top violations)
+    confidence_score: Optional[float] = None  # Overall compliance score, 0-100
+    risk_level: Optional[str] = None  # "LOW" | "MEDIUM" | "HIGH"
+
+    # --- Orchestration / observability (owned by the Supervisor) ---
+    job_status: JobStatus = "pending"
+    warnings: Annotated[List[str], operator.add] = Field(default_factory=list)
+    errors: Annotated[List[str], operator.add] = Field(default_factory=list)
+    processing_metadata: Annotated[List[StageTrace], operator.add] = Field(default_factory=list)

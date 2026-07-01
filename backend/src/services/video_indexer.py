@@ -13,6 +13,14 @@ an async ``httpx``-based one (PROJECT_AUDIT.md C1/M1), with:
 
 The YouTube download responsibility that used to live in this class has
 moved to ``services/youtube.py`` -- this class now only talks to Azure.
+
+Phase 3 change (AI_PIPELINE_VISION.md): :meth:`fetch_insights` combines the
+upload+poll steps into the one shared call both the Transcript Agent and
+OCR Agent make (coalesced via ``graph/coordination.py`` so it only actually
+runs once per audit). The old single ``extract_data`` helper that returned
+transcript+OCR+metadata bundled together is replaced by three focused
+static extractors (:meth:`extract_transcript`, :meth:`extract_ocr`,
+:meth:`extract_video_metadata`) so each agent reads only what it owns.
 """
 
 from __future__ import annotations
@@ -162,22 +170,40 @@ class VideoIndexerService:
             f"{settings.video_indexer_max_poll_attempts} attempts."
         )
 
-    @staticmethod
-    def extract_data(vi_json: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse a Video Indexer insights payload into the audit state's shape."""
-        transcript_lines: List[str] = []
-        ocr_lines: List[str] = []
+    async def fetch_insights(self, video_path: Path, video_name: str) -> Dict[str, Any]:
+        """Upload the video and wait for indexing to complete.
 
+        Returns the raw Video Indexer insights payload. This is the one
+        expensive, shared step -- callers should invoke it through
+        ``graph.coordination.video_indexer_fetch_group`` so two agents
+        auditing the same video never trigger it twice (see that module's
+        docstring for why).
+        """
+        azure_video_id = await self.upload_video(video_path, video_name)
+        return await self.wait_for_processing(azure_video_id)
+
+    @staticmethod
+    def extract_transcript(vi_json: Dict[str, Any]) -> str:
+        """Extract the full speech-to-text transcript from an insights payload."""
+        lines: List[str] = []
         for video in vi_json.get("videos", []):
             insights = video.get("insights", {})
-            transcript_lines.extend(item.get("text") for item in insights.get("transcript", []))
-            ocr_lines.extend(item.get("text") for item in insights.get("ocr", []))
+            lines.extend(item.get("text") for item in insights.get("transcript", []))
+        return " ".join(lines)
 
+    @staticmethod
+    def extract_ocr(vi_json: Dict[str, Any]) -> List[str]:
+        """Extract recognized on-screen text lines from an insights payload."""
+        lines: List[str] = []
+        for video in vi_json.get("videos", []):
+            insights = video.get("insights", {})
+            lines.extend(item.get("text") for item in insights.get("ocr", []))
+        return lines
+
+    @staticmethod
+    def extract_video_metadata(vi_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract basic video metadata (duration, platform) from an insights payload."""
         return {
-            "transcript": " ".join(transcript_lines),
-            "ocr_text": ocr_lines,
-            "video_metadata": {
-                "duration": vi_json.get("summarizedInsights", {}).get("duration", {}).get("seconds"),
-                "platform": "youtube",
-            },
+            "duration": vi_json.get("summarizedInsights", {}).get("duration", {}).get("seconds"),
+            "platform": "youtube",
         }

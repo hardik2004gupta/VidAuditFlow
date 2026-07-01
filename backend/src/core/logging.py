@@ -50,8 +50,21 @@ class _RequestIdFilter(logging.Filter):
         return True
 
 
+# The standard attributes every LogRecord carries regardless of call site.
+# Anything *not* in this set was attached via `logger.info(msg, extra={...})`
+# and should be surfaced in the JSON output -- see the bug note below.
+_STANDARD_RECORD_ATTRS = set(logging.makeLogRecord({}).__dict__.keys()) | {"message", "asctime"}
+
+
 class _JsonFormatter(logging.Formatter):
-    """Render log records as single-line JSON for structured log ingestion."""
+    """Render log records as single-line JSON for structured log ingestion.
+
+    Bug fix (Phase 3): this formatter used to build its payload from a fixed
+    set of fields only, silently dropping every ``extra={...}`` dict passed
+    to a logging call -- every ``logger.info("...", extra={"video_id": ...})``
+    call in the codebase since Phase 2 produced no visible metadata at all.
+    Any non-standard attribute on the record is now included in the output.
+    """
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
@@ -63,6 +76,15 @@ class _JsonFormatter(logging.Formatter):
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
+
+        extra_fields = {
+            key: value
+            for key, value in record.__dict__.items()
+            if key not in _STANDARD_RECORD_ATTRS and key != "request_id"
+        }
+        if extra_fields:
+            payload.update(extra_fields)
+
         return json.dumps(payload, default=str)
 
 

@@ -1,25 +1,55 @@
-"""Workflow Definition for the Brand Guardian AI.
+"""Workflow Definition for VidAuditFlow's compliance audit pipeline.
 
-This module defines the Directed Acyclic Graph (DAG) that orchestrates the
-video compliance audit process. It connects the nodes (functional units)
-using the StateGraph primitive from LangGraph.
+Phase 3 architecture (AI_PIPELINE_VISION.md / ARCHITECTURE_EVOLUTION.md
+Stage 2): a Supervisor (pure Python, no LLM) fans out to two agents that
+run as true concurrent LangGraph branches, joins them, then routes linearly
+through the remaining specialists:
 
-Architecture (unchanged from the original design -- this phase does not
-redesign the graph topology, see ARCHITECTURE_EVOLUTION.md for the planned
-future supervisor/multi-agent shape):
+    START
+      |
+      v
+    supervisor_start (fan-out)
+      |         |
+      v         v
+    transcript_agent   ocr_agent      <- run concurrently
+      |         |
+      v         v
+    supervisor_join
+      |
+      +-- (transcript failed) --------------------> summary_agent
+      |
+      v (transcript succeeded)
+    retrieval_agent
+      |
+      v
+    compliance_agent
+      |
+      v
+    summary_agent
+      |
+      v
+     END
 
-    [START] -> [index_video_node] -> [audit_content_node] -> [END]
+This is a plain DAG with one conditional edge for failure routing -- no
+cycles, no dynamic node creation, no tool-calling agents, no
+self-reflection loops. ``supervisor.route_after_join`` is LangGraph's
+standard, stable ``add_conditional_edges`` mechanism, not an experimental
+feature.
 
-Both nodes are ``async`` functions, so callers must invoke the compiled
-graph with ``await app.ainvoke(...)`` rather than the synchronous
-``app.invoke(...)``.
+All nodes are ``async``, so the workflow must be run via
+``await app.ainvoke(...)``, not the synchronous ``app.invoke(...)``.
 """
 
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from backend.src.graph.nodes import audit_content_node, index_video_node
+from backend.src.graph.nodes.compliance_agent import compliance_agent
+from backend.src.graph.nodes.ocr_agent import ocr_agent
+from backend.src.graph.nodes.retrieval_agent import retrieval_agent
+from backend.src.graph.nodes.summary_agent import summary_agent
+from backend.src.graph.nodes.transcript_agent import transcript_agent
 from backend.src.graph.state import VideoAuditState
+from backend.src.graph.supervisor import route_after_join, supervisor_join, supervisor_start
 
 
 def create_graph() -> CompiledStateGraph:
@@ -30,12 +60,34 @@ def create_graph() -> CompiledStateGraph:
     """
     workflow = StateGraph(VideoAuditState)
 
-    workflow.add_node("indexer", index_video_node)
-    workflow.add_node("auditor", audit_content_node)
+    workflow.add_node("supervisor_start", supervisor_start)
+    workflow.add_node("transcript_agent", transcript_agent)
+    workflow.add_node("ocr_agent", ocr_agent)
+    workflow.add_node("supervisor_join", supervisor_join)
+    workflow.add_node("retrieval_agent", retrieval_agent)
+    workflow.add_node("compliance_agent", compliance_agent)
+    workflow.add_node("summary_agent", summary_agent)
 
-    workflow.set_entry_point("indexer")
-    workflow.add_edge("indexer", "auditor")
-    workflow.add_edge("auditor", END)
+    workflow.set_entry_point("supervisor_start")
+
+    # Fan-out: both agents run in the same superstep, concurrently.
+    workflow.add_edge("supervisor_start", "transcript_agent")
+    workflow.add_edge("supervisor_start", "ocr_agent")
+
+    # Join: both branches must complete before the Supervisor evaluates them.
+    workflow.add_edge("transcript_agent", "supervisor_join")
+    workflow.add_edge("ocr_agent", "supervisor_join")
+
+    # Failure routing: skip Retrieval/Compliance entirely if there's no transcript.
+    workflow.add_conditional_edges(
+        "supervisor_join",
+        route_after_join,
+        {"retrieval_agent": "retrieval_agent", "summary_agent": "summary_agent"},
+    )
+
+    workflow.add_edge("retrieval_agent", "compliance_agent")
+    workflow.add_edge("compliance_agent", "summary_agent")
+    workflow.add_edge("summary_agent", END)
 
     return workflow.compile()
 
