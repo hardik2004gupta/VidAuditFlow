@@ -2,24 +2,35 @@ import { Quote, FileText, Lightbulb, Clock } from "lucide-react";
 import { SeverityBadge } from "@/features/audits/components/severity-badge";
 import type { ComplianceIssue } from "@/types/api";
 
+interface EvidenceCardProps {
+  issue: ComplianceIssue;
+  /** Hide the severity/category/timestamp row -- set to false when the
+   * caller (e.g. a card or timeline entry) already renders that header
+   * itself, so it isn't shown twice. */
+  showHeader?: boolean;
+}
+
 /**
  * Full detail for a single violation -- evidence quote, confidence,
- * policy reference, and recommendation. Used inline in the New Audit /
- * Report Viewer flows and inside the ViolationTable's row dialog.
+ * policy reference, and recommendation. The single shared source of truth
+ * for "what does one violation's full detail look like," reused by
+ * ViolationCards and EvidenceTimeline instead of each re-implementing it.
  */
-export function EvidenceCard({ issue }: { issue: ComplianceIssue }) {
+export function EvidenceCard({ issue, showHeader = true }: EvidenceCardProps) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <SeverityBadge severity={issue.severity} />
-        <span className="text-sm font-medium text-foreground">{issue.category}</span>
-        {issue.timestamp && (
-          <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="size-3.5" aria-hidden="true" />
-            {issue.timestamp}
-          </span>
-        )}
-      </div>
+      {showHeader && (
+        <div className="flex flex-wrap items-center gap-2">
+          <SeverityBadge severity={issue.severity} />
+          <span className="text-sm font-medium text-foreground">{issue.category}</span>
+          {issue.timestamp && (
+            <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="size-3.5" aria-hidden="true" />
+              {issue.timestamp}
+            </span>
+          )}
+        </div>
+      )}
 
       <p className="text-sm text-foreground">{issue.description}</p>
 

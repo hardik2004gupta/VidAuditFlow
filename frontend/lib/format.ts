@@ -37,3 +37,29 @@ export function formatStageDuration(seconds: number): string {
 export function shortId(id: string): string {
   return id.replace(/-/g, "").slice(0, 8);
 }
+
+/**
+ * Parses a violation's "mm:ss" (or "h:mm:ss") timestamp into seconds, for
+ * chronological sorting. Returns `null` unparseable/missing so callers can
+ * push undated violations to the end instead of guessing a position.
+ */
+export function parseTimestampToSeconds(timestamp: string | null): number | null {
+  if (!timestamp) return null;
+  const parts = timestamp.split(":").map(Number);
+  if (parts.some((part) => Number.isNaN(part))) return null;
+  return parts.reduceRight((total, part, index) => total + part * Math.pow(60, parts.length - 1 - index), 0);
+}
+
+/**
+ * Total wall-clock span of a report's `processing_metadata` (earliest
+ * stage start to latest stage end) -- a reasonable "processing time" figure
+ * since the Report response has no single duration field of its own.
+ */
+export function computeProcessingSpanSeconds(
+  traces: { started_at: string; ended_at: string }[],
+): number | null {
+  if (traces.length === 0) return null;
+  const starts = traces.map((t) => new Date(t.started_at).getTime());
+  const ends = traces.map((t) => new Date(t.ended_at).getTime());
+  return (Math.max(...ends) - Math.min(...starts)) / 1000;
+}
