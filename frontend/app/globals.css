@@ -1,0 +1,274 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Design tokens, per UI_VISION.md.
+ *
+ * Dark is the default, most-polished theme (UI_VISION.md "Dark Theme"
+ * section); light is a straightforward token swap. Severity colors
+ * (success/warning/critical/info) are identical across both themes so
+ * their meaning never changes -- only surfaces/text invert.
+ *
+ * shadcn/ui's structural tokens (background/card/popover/primary/
+ * secondary/muted/accent/destructive/border/input/ring) are mapped onto
+ * UI_VISION.md's palette below; the four severity tokens are additional,
+ * domain-specific tokens layered on top for compliance status only (never
+ * reused for generic UI decoration, per UI_VISION.md's explicit rule).
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Domain tokens: compliance severity / status -- exclusive use, see UI_VISION.md */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-critical: var(--critical);
+  --color-critical-foreground: var(--critical-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Border radius: consistent rounded-lg everywhere (UI_VISION.md Component Style) */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --radius: 0.5rem; /* 8px -- rounded-lg baseline */
+
+  /* Light theme: near-black/near-white text, never pure contrast (UI_VISION.md Typography) */
+  --background: #fafafa;
+  --foreground: #0a0a0a;
+
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+
+  --primary: #6366f1; /* brand accent (indigo), primary CTAs only */
+  --primary-foreground: #fafafa;
+
+  --secondary: #f0f0f0;
+  --secondary-foreground: #0a0a0a;
+
+  --muted: #f0f0f0;
+  --muted-foreground: #6b6b6b;
+
+  --accent: #efeff8; /* subtle hover/highlight tint, distinct from brand primary */
+  --accent-foreground: #0a0a0a;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #6366f1;
+
+  --success: #16a34a;
+  --success-foreground: #fafafa;
+  --warning: #d97706;
+  --warning-foreground: #fafafa;
+  --critical: #ef4444;
+  --critical-foreground: #fafafa;
+  --info: #0ea5e9;
+  --info-foreground: #fafafa;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-border: #e5e5e5;
+  --sidebar-accent: #f0f0f0;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-ring: #6366f1;
+
+  --chart-1: #6366f1;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #38bdf8;
+}
+
+.dark {
+  /* Dark theme: the default, most-polished mode (UI_VISION.md Color Palette) */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  --card: #141414; /* "surface" */
+  --card-foreground: #ededed;
+  --popover: #1c1c1c; /* "surface-elevated" */
+  --popover-foreground: #ededed;
+
+  --primary: #6366f1;
+  --primary-foreground: #fafafa;
+
+  --secondary: #1c1c1c;
+  --secondary-foreground: #ededed;
+
+  --muted: #1c1c1c;
+  --muted-foreground: #8c8c8c;
+
+  --accent: #1c1c2b; /* subtle indigo-tinted hover, distinct from brand primary */
+  --accent-foreground: #ededed;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+
+  --border: #262626;
+  --input: #262626;
+  --ring: #6366f1;
+
+  --success: #22c55e;
+  --success-foreground: #052e12;
+  --warning: #f59e0b;
+  --warning-foreground: #341c02;
+  --critical: #ef4444;
+  --critical-foreground: #2c0a0a;
+  --info: #38bdf8;
+  --info-foreground: #04222f;
+
+  --sidebar: #141414;
+  --sidebar-foreground: #ededed;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-border: #262626;
+  --sidebar-accent: #1c1c1c;
+  --sidebar-accent-foreground: #ededed;
+  --sidebar-ring: #6366f1;
+
+  --chart-1: #6366f1;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #38bdf8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+    font-feature-settings:
+      "cv11" 1,
+      "ss01" 1;
+  }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
+
+  /*
+   * Type-scale rhythm (UI_VISION.md Typography table): headings get tight
+   * letter-spacing and a compact line-height (1.1-1.2) so hierarchy comes
+   * from type, not just size -- the single biggest "looks dated" fix.
+   * Component-level classes may still override size/weight per context;
+   * this only standardizes tracking/line-height/font so nothing needs to
+   * repeat `tracking-tight leading-tight` at every call site.
+   */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  h1 {
+    font-weight: 600;
+  }
+  h2,
+  h3 {
+    font-weight: 600;
+  }
+}
+
+@layer utilities {
+  /* One consistent max content width for dashboard pages (UI_VISION.md Spacing) */
+  .content-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Monospace accent for IDs/timestamps/technical values (UI_VISION.md Typography) */
+  .font-technical {
+    font-family: var(--font-geist-mono);
+    letter-spacing: -0.01em;
+  }
+
+  /* Sweeping shimmer for Skeleton, replacing a flat opacity pulse -- a
+     subtler, more premium loading signal (Linear/Vercel convention). */
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 20%,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 40%,
+      transparent 60%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

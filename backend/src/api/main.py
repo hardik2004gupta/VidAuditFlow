@@ -32,6 +32,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 
 from backend.src.api.routers import audits, reports  # noqa: E402
@@ -83,6 +84,16 @@ app = FastAPI(
 
 app.include_router(audits.router)
 app.include_router(reports.router)
+
+# Phase 6: allow the Next.js frontend to call this API from the browser.
+# Exact allow-list (no wildcard), per API_PLAN.md's CORS section.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")

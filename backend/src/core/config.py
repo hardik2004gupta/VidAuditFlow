@@ -86,6 +86,15 @@ class Settings(BaseSettings):
     # since both drivers are async (aiosqlite / asyncpg).
     database_url: str = "sqlite+aiosqlite:///./vidauditflow.db"
 
+    # --- CORS (Phase 6) ---
+    # Comma-separated exact origins, per API_PLAN.md's CORS section: no
+    # wildcard, ever, since the frontend is the only intended caller.
+    cors_allowed_origins: str = "http://localhost:3000"
+
+    @property
+    def cors_allowed_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:
