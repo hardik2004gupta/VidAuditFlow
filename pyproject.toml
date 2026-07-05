@@ -1,7 +1,7 @@
 [project]
 name = "complianceqapipeline"
 version = "0.1.0"
-description = "Add your description here"
+description = "VidAuditFlow: AI-powered video compliance auditing backend (FastAPI + LangGraph)."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -11,7 +11,6 @@ dependencies = [
     "azure-identity>=1.25.1",
     "azure-monitor-opentelemetry>=1.8.3",
     "azure-search-documents>=11.6.0",
-    "azure-storage-blob>=12.27.1",
     "fastapi>=0.128.0",
     "httpx>=0.28.1",
     "langchain>=1.2.0",
@@ -30,9 +29,18 @@ dependencies = [
     "yt-dlp>=2025.1.12",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.15.20",
+]
+
 # Removed as part of Phase 2 (backend foundation modernization) dependency
-# cleanup -- PROJECT_AUDIT.md / TECHNICAL_DEBT.md TD-8 flagged these as
-# declared but never imported anywhere in the codebase:
+# cleanup -- docs/audits/PROJECT_AUDIT.md / docs/planning/TECHNICAL_DEBT.md
+# TD-8 flagged these as declared but never imported anywhere in the codebase:
 #   streamlit, redis, firecrawl-py, pandas
 # `requests` was also removed: `services/video_indexer.py` now uses
 # `httpx.AsyncClient` exclusively.
@@ -44,3 +52,53 @@ dependencies = [
 # `psycopg2-binary` (the old *sync* Postgres driver) is intentionally NOT
 # re-added since the whole backend is async; `asyncpg` is its async
 # equivalent.
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["backend/src"]
+omit = [
+    "backend/src/api/telemetry.py",  # thin Azure Monitor wiring, not worth mocking
+    "backend/alembic/*",
+]
+
+[tool.coverage.report]
+skip_empty = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["backend/alembic/versions"]
+
+[tool.ruff.lint]
+# Kept intentionally small -- this is a pre-existing, already-disciplined
+# codebase (see REPOSITORY_AUDIT.md's pyflakes-clean finding), not a fresh
+# project. The goal is catching real bugs and unused code going forward,
+# not imposing a large new style the existing code wasn't written against.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (unused imports/vars, undefined names)
+    "I",   # isort (import ordering)
+    "B",   # flake8-bugbear (common bug patterns)
+]
+ignore = [
+    "E501",  # line length is handled by the formatter, not the linter
+    "B008",  # FastAPI's `Depends(...)`/`Query(...)` as a default argument is the framework's own idiom, not a bug
+]
+# Deliberately NOT enabling pyupgrade ("UP"): this codebase consistently
+# uses `typing.Dict`/`List`/`Optional` (with `from __future__ import
+# annotations`) rather than PEP 585/604 builtin generics -- a real,
+# consistent, pre-existing style choice, not an oversight. Turning "UP" on
+# would flag ~160 pre-existing call sites across files this phase has no
+# reason to touch, directly contradicting "keep existing style."
+
+[tool.ruff.lint.per-file-ignores]
+"backend/alembic/env.py" = ["F401"]  # model imports are for SQLModel.metadata registration, not direct use
+"backend/tests/*" = ["F401"]  # fixtures are often imported for their side effects

@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Cancel superseded runs on the same branch/PR instead of letting them queue.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dummy values so `Settings()` (backend/src/core/config.py) can construct
+  # without real Azure credentials -- nothing in this workflow makes a real
+  # Azure/LLM call, mirroring backend/tests/conftest.py's approach.
+  ENVIRONMENT: test
+  AZURE_OPENAI_API_KEY: ci-dummy-key
+  AZURE_OPENAI_ENDPOINT: https://ci-dummy.openai.azure.com
+  AZURE_OPENAI_CHAT_DEPLOYMENT: ci-dummy-deployment
+  AZURE_SEARCH_ENDPOINT: https://ci-dummy.search.windows.net
+  AZURE_SEARCH_API_KEY: ci-dummy-key
+  AZURE_SEARCH_INDEX_NAME: ci-dummy-index
+  AZURE_VI_LOCATION: eastus
+  AZURE_VI_ACCOUNT_ID: 00000000-0000-0000-0000-000000000000
+  AZURE_SUBSCRIPTION_ID: 00000000-0000-0000-0000-000000000000
+  AZURE_RESOURCE_GROUP: ci-dummy-rg
+
+jobs:
+  backend:
+    name: Backend (lint, tests, import check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Backend tests (with coverage)
+        run: uv run pytest --cov --cov-report=term-missing
+
+      - name: Verify backend imports cleanly
+        run: uv run python -c "from backend.src.api.main import app; print(f'{len(app.routes)} routes registered')"
+
+  frontend:
+    name: Frontend (typecheck, lint, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Frontend tests (with coverage)
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000

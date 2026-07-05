@@ -3,12 +3,11 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
 
 # Make `backend.src.*` importable when Alembic is invoked from the repo
 # root (the usual case: `uv run alembic upgrade head`).
@@ -18,9 +17,10 @@ if str(_REPO_ROOT) not in sys.path:
 
 load_dotenv(override=True)
 
+from sqlmodel import SQLModel  # noqa: E402
+
 from backend.src.core.config import settings  # noqa: E402
 from backend.src.db.models import AuditJob, Report, User  # noqa: E402,F401 -- populates SQLModel.metadata
-from sqlmodel import SQLModel  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
