@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ComplianceScoreCard } from "@/features/audits/components/compliance-score-card";
+import { CopilotLauncher } from "@/features/reports/components/copilot/copilot-launcher";
 import { ExecutiveSummaryCard } from "@/features/reports/components/executive-summary-card";
 import { EvidenceTimeline } from "@/features/reports/components/evidence-timeline";
 import { ReportActionsMenu } from "@/features/reports/components/report-actions-menu";
@@ -76,6 +77,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           <ReportMetadataPanel report={report} />
         </div>
       </div>
+
+      <CopilotLauncher reportId={report.id} />
     </div>
   );
 }

@@ -39,3 +39,7 @@ class ValidationError(VidAuditFlowError):
 
 class NotFoundError(VidAuditFlowError):
     """A requested resource (job, report, ...) does not exist."""
+
+
+class ChatError(VidAuditFlowError):
+    """The report chat (AI Copilot) LLM call failed or returned nothing usable."""

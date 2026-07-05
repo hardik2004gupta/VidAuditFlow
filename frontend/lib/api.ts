@@ -1,4 +1,4 @@
-import type { AuditJob, Report } from "@/types/api";
+import type { AuditJob, ChatMessageResponse, ChatTurn, Report } from "@/types/api";
 
 /**
  * Real API client for the FastAPI backend (Phase 6). Replaces `lib/mock/`
@@ -91,6 +91,18 @@ export async function createAudit(videoUrl: string): Promise<AuditJob> {
 
 export async function fetchReport(id: string): Promise<Report> {
   return apiFetch<Report>(`/api/v1/reports/${id}`);
+}
+
+/** AI Copilot: ask a question about a specific report (Phase 8). Stateless -- always send the full conversation so far. */
+export async function sendReportChatMessage(
+  reportId: string,
+  message: string,
+  conversation: ChatTurn[],
+): Promise<ChatMessageResponse> {
+  return apiFetch<ChatMessageResponse>(`/api/v1/reports/${reportId}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ message, conversation }),
+  });
 }
 
 /**

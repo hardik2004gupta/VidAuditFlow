@@ -6,12 +6,7 @@
  *   - backend/src/schemas/audit.py   (ComplianceIssue, RetrievedRule)
  *   - backend/src/graph/observability.py (StageTrace)
  *   - backend/src/db/models.py       (AuditJobStatus)
- *
- * This phase does not call the real API (see PHASE_5_SUMMARY.md) -- these
- * types exist so the mock data layer (lib/mock/) and every component are
- * already shaped exactly like the real response bodies will be, per
- * API_PLAN.md. When backend integration lands, only `lib/api-client.ts`
- * needs to change; no component or type should need to.
+ *   - backend/src/services/report_chat.py (ChatTurn, ChatMessageRequest/Response)
  */
 
 export type AuditJobStatus =
@@ -112,3 +107,20 @@ export const PIPELINE_STAGES = [
 ] as const;
 
 export type PipelineStageKey = (typeof PIPELINE_STAGES)[number]["key"];
+
+/** One turn in a report chat conversation -- mirrors the backend's `ChatTurn`. */
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** POST /api/v1/reports/{id}/chat request body (ChatMessageRequest). */
+export interface ChatMessageRequest {
+  message: string;
+  conversation: ChatTurn[];
+}
+
+/** POST /api/v1/reports/{id}/chat response shape (ChatMessageResponse). */
+export interface ChatMessageResponse {
+  reply: string;
+}
