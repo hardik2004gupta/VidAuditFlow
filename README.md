@@ -45,7 +45,8 @@ compliance-qa-pipeline/
 │   ├── lib/                  api.ts (real backend client), format.ts, report-export.ts
 │   └── types/                api.ts -- TypeScript types mirroring the backend's Pydantic schemas
 ├── alembic/                  Database migrations
-└── *.md                      Planning docs and per-phase implementation summaries (see below)
+├── main.py                   CLI smoke-test entry point (runs the pipeline directly, no API/DB)
+└── docs/                     Planning docs, audits, and per-phase implementation summaries (see below)
 ```
 
 ---
@@ -102,27 +103,45 @@ Full reference with inline comments: [`.env.example`](.env.example).
 
 ---
 
+## Development
+
+A `Makefile` wraps the common commands (works out of the box on Linux/macOS, or on Windows via WSL/Git Bash with `make` installed; the raw commands to its right work everywhere, including plain PowerShell):
+
+| `make` target | Equivalent |
+|---|---|
+| `make setup` | `uv sync --all-groups` && `cd frontend && npm install` |
+| `make dev-backend` | `uv run uvicorn backend.src.api.main:app --reload` |
+| `make dev-frontend` | `cd frontend && npm run dev` |
+| `make test` | Backend (`uv run pytest`) + frontend (`cd frontend && npm test`) |
+| `make coverage` | Both test suites, with coverage reports |
+| `make lint` | `uv run ruff check .` + `cd frontend && npm run lint` |
+| `make format` | `uv run ruff format .` + `cd frontend && npm run format` |
+| `make build` | `cd frontend && npm run build` |
+| `make migrate` | `uv run alembic upgrade head` |
+
+Run `make help` for the full list. **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push/PR: Ruff, backend tests with coverage, a backend import check, TypeScript, ESLint, frontend tests with coverage, and a production frontend build — all against dummy Azure credentials, no real service calls. See [`QUALITY_REPORT.md`](QUALITY_REPORT.md) for what the test suite covers and what it deliberately doesn't.
+
+---
+
 ## Documentation
 
-This project was built in phases, each with a written brief and a summary of what shipped. Planning docs describe the target architecture; phase summaries describe what was actually implemented and verified.
-
-**Planning:**
-[`PROJECT_AUDIT.md`](PROJECT_AUDIT.md) · [`MODERNIZATION_PLAN.md`](MODERNIZATION_PLAN.md) · [`ARCHITECTURE_EVOLUTION.md`](ARCHITECTURE_EVOLUTION.md) · [`BACKEND_VISION.md`](BACKEND_VISION.md) · [`AI_PIPELINE_VISION.md`](AI_PIPELINE_VISION.md) · [`DATABASE_PLAN.md`](DATABASE_PLAN.md) · [`API_PLAN.md`](API_PLAN.md) · [`UI_VISION.md`](UI_VISION.md) · [`FOLDER_STRUCTURE_V2.md`](FOLDER_STRUCTURE_V2.md) · [`FEATURE_ROADMAP.md`](FEATURE_ROADMAP.md) · [`IMPLEMENTATION_PHASES.md`](IMPLEMENTATION_PHASES.md) · [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md) · [`PROJECT_SCORE_TARGET.md`](PROJECT_SCORE_TARGET.md)
+This project was built in phases, each with a written brief and a summary of what shipped. Everything beyond this README lives in [`docs/`](docs/) (see [`docs/README.md`](docs/README.md) for the full index) — planning docs describe the target architecture, phase summaries describe what was actually implemented and verified, and [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) documents the pre-public-release cleanup.
 
 **Implementation, in order:**
 
 | Phase | Summary | Scope |
 |---|---|---|
-| 2 | [`PHASE_2_SUMMARY.md`](PHASE_2_SUMMARY.md) | Backend foundation: config, logging, async, error handling |
-| 3 | [`PHASE_3_SUMMARY.md`](PHASE_3_SUMMARY.md) | Supervisor-based, 7-node LangGraph pipeline |
-| 4 | [`PHASE_4_SUMMARY.md`](PHASE_4_SUMMARY.md) | Persistence (SQLModel/Alembic) + background job execution |
-| 4.5 | [`PHASE_4_5_AUDIT.md`](PHASE_4_5_AUDIT.md) | Full engineering audit and rectification |
-| 5 | [`PHASE_5_SUMMARY.md`](PHASE_5_SUMMARY.md) | Frontend foundation (Next.js, mocked data) |
-| 6 | [`PHASE_6_SUMMARY.md`](PHASE_6_SUMMARY.md) | Real backend integration, typography/visual polish |
-| 7 | [`PHASE_7_SUMMARY.md`](PHASE_7_SUMMARY.md) | Premium report experience (evidence timeline, violation cards, export) |
+| 2 | [`PHASE_2_SUMMARY.md`](docs/phases/PHASE_2_SUMMARY.md) | Backend foundation: config, logging, async, error handling |
+| 3 | [`PHASE_3_SUMMARY.md`](docs/phases/PHASE_3_SUMMARY.md) | Supervisor-based, 7-node LangGraph pipeline |
+| 4 | [`PHASE_4_SUMMARY.md`](docs/phases/PHASE_4_SUMMARY.md) | Persistence (SQLModel/Alembic) + background job execution |
+| 4.5 | [`PHASE_4_5_AUDIT.md`](docs/audits/PHASE_4_5_AUDIT.md) | Full engineering audit and rectification |
+| 5 | [`PHASE_5_SUMMARY.md`](docs/phases/PHASE_5_SUMMARY.md) | Frontend foundation (Next.js, mocked data) |
+| 6 | [`PHASE_6_SUMMARY.md`](docs/phases/PHASE_6_SUMMARY.md) | Real backend integration, typography/visual polish |
+| 7 | [`PHASE_7_SUMMARY.md`](docs/phases/PHASE_7_SUMMARY.md) | Premium report experience (evidence timeline, violation cards, export) |
+| 8 | [`PHASE_8_SUMMARY.md`](docs/phases/PHASE_8_SUMMARY.md) | AI Copilot for compliance reports |
 
 ---
 
 ## Current Status
 
-The full stack runs end-to-end: creating an audit, polling its live status, and viewing the resulting report all work against the real backend (no mocks). Without real Azure credentials configured, a submitted audit will still be created and tracked correctly, but the pipeline itself will fail at the transcript/OCR stage — the app is designed to degrade gracefully in that case (a report is still generated, explaining what failed, rather than the job silently disappearing).
+The full stack runs end-to-end: creating an audit, polling its live status, viewing the resulting report, and chatting with an AI Copilot grounded in that report (`POST /api/v1/reports/{id}/chat`) all work against the real backend (no mocks). Without real Azure credentials configured, a submitted audit will still be created and tracked correctly, but the pipeline itself will fail at the transcript/OCR stage — the app is designed to degrade gracefully in that case (a report is still generated, explaining what failed, rather than the job silently disappearing).

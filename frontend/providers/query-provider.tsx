@@ -5,14 +5,10 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState, type ReactNode } from "react";
 
 /**
- * TanStack Query provider. Even though this phase uses the mock data layer
- * (lib/mock/) instead of real HTTP calls, every data-fetching hook already
- * goes through `useQuery`/`useMutation` -- so when real backend integration
- * lands, only the query functions change, not the data layer's shape,
- * caching behavior, or loading/error states any component relies on.
- *
- * No optimistic updates, no persistence/caching beyond React Query's
- * in-memory default -- explicitly out of scope for this phase.
+ * TanStack Query provider for the whole app, backing every `useQuery`/
+ * `useMutation` call against `lib/api.ts`'s real backend client. No
+ * optimistic updates, no persistence/caching beyond React Query's
+ * in-memory default.
  */
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(

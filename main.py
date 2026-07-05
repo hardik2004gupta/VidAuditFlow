@@ -1,11 +1,10 @@
-"""
-Main Execution Entry Point for Brand Guardian AI.
+"""CLI smoke-test entry point for the VidAuditFlow compliance pipeline.
 
-This file is the "control center" that starts and manages the entire
-compliance audit workflow. Think of it as the master switch that:
-1. Sets up the audit request
-2. Runs the AI workflow
-3. Displays the final compliance report
+Runs one hardcoded video through the LangGraph workflow directly (bypassing
+the API and persistence layers) and prints the result -- useful for
+exercising the graph in isolation without starting the server or a
+database. For real usage, prefer the API (`POST /api/v1/audits`, or the
+backward-compatible synchronous `POST /audit`) -- see `backend/src/api/main.py`.
 """
 
 import asyncio
@@ -22,7 +21,7 @@ from backend.src.core.logging import get_logger  # noqa: E402
 from backend.src.graph.adapters import to_audit_result  # noqa: E402
 from backend.src.graph.workflow import app  # noqa: E402
 
-logger = get_logger("brand-guardian-runner")
+logger = get_logger("vidauditflow-cli")
 
 
 async def run_cli_simulation() -> None:
@@ -96,18 +95,3 @@ async def run_cli_simulation() -> None:
 
 if __name__ == "__main__":
     asyncio.run(run_cli_simulation())
-
-
-"""
-You have moved from "Coding" to "Product."
-
-Ingestion:  (YouTube -> Azure)
-
-Indexing:  (Speech-to-Text + OCR)
-
-Retrieval:  (Found the rules about "Claims")
-
-Reasoning:  (Applied rules to the specific claims in the video)
-
-You are done. Your pipeline is fully operational.
-"""
